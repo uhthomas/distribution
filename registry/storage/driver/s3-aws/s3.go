@@ -15,9 +15,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math"
 	"net/http"
 	"reflect"
@@ -1327,6 +1329,18 @@ func (w *writer) Commit() error {
 		},
 	})
 	if err != nil {
+		var b strings.Builder
+		if err := json.NewEncoder(&b).Encode(&s3.CompleteMultipartUploadInput{
+			Bucket:   aws.String(w.driver.Bucket),
+			Key:      aws.String(w.key),
+			UploadId: aws.String(w.uploadID),
+			MultipartUpload: &s3.CompletedMultipartUpload{
+				Parts: completedUploadedParts,
+			},
+		}); err == nil {
+			log.Println("debug commit:", b.String())
+		}
+
 		w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
 			Bucket:   aws.String(w.driver.Bucket),
 			Key:      aws.String(w.key),
